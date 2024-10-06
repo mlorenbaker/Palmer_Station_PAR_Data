@@ -1,0 +1,139 @@
+---
+title: "Untitled"
+author: "MLB"
+date: "2024-10-04"
+output: html_document
+---
+
+# Palmer Station PAR Data 
+
+## Calculate Daylight Hours
+
+# Step 1: Load in Files
+
+```{r}
+
+# List all .txt files in your directory
+month <- list.files(path = "C:/Users/mlb72/OneDrive/Documents/Rice/Lab/Lighting_systems/2023/December", 
+                        pattern = "*.txt", full.names = TRUE)
+
+# Subset files containing "BASE" in the filename
+base_files <- month[grepl("BASE", month)]
+
+# Read each "BASE" file and append to a list
+Month_files <- lapply(base_files, function(x) read.table(x, header = TRUE, sep = "\t"))
+
+
+
+```
+
+# Step 2: Organize Files
+
+```{r}
+# Optionally, name the list elements based on filenames
+names(Month_files) <- gsub(".*/|\\.txt", "", base_files)
+
+for (i in seq_along(Month_files)) {
+  Month_files[[i]]$Sample.DateTime <- as.POSIXct(Month_files[[i]]$Sample.DateTime)
+}
+
+```
+
+# Step 3: Separate Date
+
+```{r}
+# Loop through each data frame in Month_files
+for (i in seq_along(Month_files)) {
+  
+  Month_files[[i]]$Date <- as.Date(Month_files[[i]]$Sample.DateTime)
+
+}
+
+# Check if correct Month #####
+
+print(Month_files[[i]]$Date[1:10])
+
+```
+
+# Step 4: Calculate Daylight Hours & Average Max Intensity
+
+```{r}
+
+# Create an empty data frame to store the results
+daylight_summary <- data.frame(Date = character(), Hours_of_Daylight = numeric(), Avg_Max_Quantum = numeric(), stringsAsFactors = FALSE)
+
+# Loop through each data frame in Month_files
+for (i in seq_along(Month_files)) {
+  
+  # Extract the current data frame from the list
+  data <- Month_files[[i]]
+  
+  # Extract the first date
+  date <- data$Date[1]
+  
+  # Calculate hours of daylight (Quantum > 0)
+  daylight_hours <- sum(data$Quantum > 0) / 60  # Assuming data is in 1-minute increments
+  
+  # Calculate the average of the top 5 maximum Quantum values
+  top_5_avg <- mean(sort(data$Quantum, decreasing = TRUE)[1:5], na.rm = TRUE)
+  
+  # Append results into the new data frame
+  daylight_summary <- rbind(daylight_summary, 
+                            data.frame(Date = date, Hours_of_Daylight = daylight_hours, Avg_Max_Quantum = top_5_avg))
+}
+
+# View the summary
+daylight_summary
+
+
+```
+
+# Step 5: Protect Data
+
+```{r}
+
+December <- daylight_summary
+
+```
+
+# Step 6: Bind data back together
+
+```{r}
+
+PAR_Data <- rbind(January, February, March, April, May,
+                  June, July, August, September, October,
+                  November, December)
+
+```
+
+# Step 7: Export
+
+```{r}
+
+write.csv(PAR_Data, "C:/Users/mlb72/OneDrive/Documents/Rice/Lab/Lighting_systems/Palmer_station_PAR_data_2023_MLB.csv")
+
+
+```
+
+# Step 8: Plots
+
+```{r}
+
+ggplot(PAR_Data, aes(Date, Hours_of_Daylight))+
+  geom_point()+
+  theme_bw()+
+  labs(x = "Date", 
+       y = "Hours",
+       title = "Hours of Daylight at Palmer Station",
+       subtitle = "2023")
+
+ggplot(PAR_Data, aes(Date, Avg_Max_Quantum))+
+  geom_point()+
+  theme_bw()+
+  labs(x = "Date", 
+       y = "Max PAR",
+       title = "Average Max PAR at Palmer Station",
+       subtitle = "2023")
+
+
+```
